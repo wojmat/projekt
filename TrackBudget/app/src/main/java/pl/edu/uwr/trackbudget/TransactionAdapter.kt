@@ -8,9 +8,15 @@ import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
 
+/**
+ * RecyclerView adapter that renders a list of [Transaction] items.
+ */
 class TransactionAdapter(private var transactions: List<Transaction>) :
     RecyclerView.Adapter<TransactionAdapter.TransactionHolder>() {
 
+    /**
+     * Holds references to the views for a transaction row.
+     */
     class TransactionHolder(view: View) : RecyclerView.ViewHolder(view) {
         val label : TextView = view.findViewById(R.id.label)
         val amount : TextView = view.findViewById(R.id.amount)
@@ -25,10 +31,10 @@ class TransactionAdapter(private var transactions: List<Transaction>) :
         val transaction = transactions[position]
         val context = holder.amount.context
 
-        if(transaction.amount >= 0){
+        if (transaction.amount >= 0) {
             holder.amount.text = "+ %.2f".format(transaction.amount)
             holder.amount.setTextColor(ContextCompat.getColor(context, R.color.green))
-        }else {
+        } else {
             holder.amount.text = "- %.2f".format(Math.abs(transaction.amount))
             holder.amount.setTextColor(ContextCompat.getColor(context, R.color.red))
         }

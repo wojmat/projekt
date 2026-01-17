@@ -5,16 +5,19 @@ import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.view.View
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import androidx.room.Room
 import com.google.android.material.snackbar.Snackbar
-import kotlinx.android.synthetic.main.activity_add_transaction.*
 import kotlinx.android.synthetic.main.activity_main.*
-import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
+/**
+ * Main screen showing the dashboard totals and a list of transactions.
+ */
 class MainActivity : AppCompatActivity() {
     private lateinit var deletedTransaction: Transaction
     private lateinit var transactions : List<Transaction>
@@ -32,9 +35,7 @@ class MainActivity : AppCompatActivity() {
         transactionAdapter = TransactionAdapter(transactions)
         linearLayoutManager = LinearLayoutManager(this)
 
-        db = Room.databaseBuilder(this,
-        AppDatabase::class.java,
-        "transactions").build()
+        db = AppDatabase.getInstance(this)
 
         recyclerview.apply {
             adapter = transactionAdapter
@@ -42,7 +43,7 @@ class MainActivity : AppCompatActivity() {
         }
 
 
-        // swipe to remove
+        // Swipe right to remove a transaction and show undo via Snackbar.
         val itemTouchHelper = object : ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.RIGHT){
             override fun onMove(
                 recyclerView: RecyclerView,
@@ -67,19 +68,24 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun fetchAll(){
-        GlobalScope.launch {
-            transactions = db.transactionDao().getAll()
-
-            runOnUiThread {
-                updateDashboard()
-                transactionAdapter.setData(transactions)
+    private fun fetchAll() {
+        lifecycleScope.launch {
+            transactions = withContext(Dispatchers.IO) {
+                db.transactionDao().getAll()
             }
+
+            updateDashboard()
+            transactionAdapter.setData(transactions)
         }
     }
-    private fun updateDashboard(){
-        val totalAmount = transactions.map { it.amount }.sum()
-        val budgetAmount = transactions.filter { it.amount>0 }.map{it.amount}.sum()
+
+    /**
+     * Updates the dashboard totals based on the current [transactions].
+     */
+    private fun updateDashboard() {
+        // Total is calculated from all transactions; budget covers positive amounts.
+        val totalAmount = transactions.sumOf { it.amount }
+        val budgetAmount = transactions.filter { it.amount > 0 }.sumOf { it.amount }
         val expenseAmount = totalAmount - budgetAmount
 
         balance.text = "%.2f".format(totalAmount)
@@ -87,20 +93,20 @@ class MainActivity : AppCompatActivity() {
         expense.text = "%.2f".format(expenseAmount)
     }
 
-    private fun undoDelete(){
-        GlobalScope.launch {
-            db.transactionDao().insertAll(deletedTransaction)
+    private fun undoDelete() {
+        lifecycleScope.launch {
+            withContext(Dispatchers.IO) {
+                db.transactionDao().insertAll(deletedTransaction)
+            }
 
             transactions = oldTransactions
 
-            runOnUiThread {
-                transactionAdapter.setData(transactions)
-                updateDashboard()
-            }
+            transactionAdapter.setData(transactions)
+            updateDashboard()
         }
     }
 
-    private fun showSnackbar(){
+    private fun showSnackbar() {
         val view = findViewById<View>(R.id.coordinator)
         val snackbar = Snackbar.make(view, "Usunięto!",Snackbar.LENGTH_LONG)
         snackbar.setAction("Przywróć"){
@@ -111,19 +117,19 @@ class MainActivity : AppCompatActivity() {
             .show()
     }
 
-    private fun deleteTransaction(transaction: Transaction){
+    private fun deleteTransaction(transaction: Transaction) {
         deletedTransaction = transaction
         oldTransactions = transactions
 
-        GlobalScope.launch {
-            db.transactionDao().delete(transaction)
+        lifecycleScope.launch {
+            withContext(Dispatchers.IO) {
+                db.transactionDao().delete(transaction)
+            }
 
             transactions = transactions.filter { it.id != transaction.id }
-            runOnUiThread {
-                updateDashboard()
-                transactionAdapter.setData(transactions)
-                showSnackbar()
-            }
+            updateDashboard()
+            transactionAdapter.setData(transactions)
+            showSnackbar()
         }
     }
 

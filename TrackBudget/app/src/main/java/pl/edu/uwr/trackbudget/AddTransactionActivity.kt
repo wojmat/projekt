@@ -3,11 +3,15 @@ package pl.edu.uwr.trackbudget
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import androidx.core.widget.addTextChangedListener
-import androidx.room.Room
 import kotlinx.android.synthetic.main.activity_add_transaction.*
-import kotlinx.coroutines.GlobalScope
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
+/**
+ * Screen for adding a new transaction.
+ */
 class AddTransactionActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -44,13 +48,15 @@ class AddTransactionActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Persists a new [transaction] on a background thread.
+     */
     private fun insert(transaction: Transaction){
-        val db = Room.databaseBuilder(this,
-            AppDatabase::class.java,
-            "transactions").build()
-
-        GlobalScope.launch {
-            db.transactionDao().insertAll(transaction)
+        val db = AppDatabase.getInstance(this)
+        lifecycleScope.launch {
+            withContext(Dispatchers.IO) {
+                db.transactionDao().insertAll(transaction)
+            }
             finish()
         }
     }
