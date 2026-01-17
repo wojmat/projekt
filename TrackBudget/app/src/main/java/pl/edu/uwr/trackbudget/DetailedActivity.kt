@@ -6,7 +6,7 @@ import android.os.Bundle
 import android.view.View
 import android.view.inputmethod.InputMethodManager
 import androidx.core.widget.addTextChangedListener
-import androidx.room.Room
+import androidx.lifecycle.lifecycleScope
 import kotlinx.android.synthetic.main.activity_add_transaction.amountInput
 import kotlinx.android.synthetic.main.activity_add_transaction.amountLayout
 import kotlinx.android.synthetic.main.activity_add_transaction.closeBtn
@@ -14,9 +14,13 @@ import kotlinx.android.synthetic.main.activity_add_transaction.descriptionInput
 import kotlinx.android.synthetic.main.activity_add_transaction.labelInput
 import kotlinx.android.synthetic.main.activity_add_transaction.labelLayout
 import kotlinx.android.synthetic.main.activity_detailed.*
-import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
+/**
+ * Screen for viewing and updating an existing transaction.
+ */
 class DetailedActivity : AppCompatActivity() {
     private lateinit var transaction : Transaction
 
@@ -75,13 +79,15 @@ class DetailedActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Updates the existing [transaction] in the database.
+     */
     private fun update(transaction: Transaction){
-        val db = Room.databaseBuilder(this,
-            AppDatabase::class.java,
-            "transactions").build()
-
-        GlobalScope.launch {
-            db.transactionDao().update(transaction)
+        val db = AppDatabase.getInstance(this)
+        lifecycleScope.launch {
+            withContext(Dispatchers.IO) {
+                db.transactionDao().update(transaction)
+            }
             finish()
         }
     }

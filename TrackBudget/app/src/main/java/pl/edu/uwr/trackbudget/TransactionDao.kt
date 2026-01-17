@@ -2,17 +2,20 @@ package pl.edu.uwr.trackbudget
 
 import androidx.room.*
 
+/**
+ * DAO for accessing [Transaction] records.
+ */
 @Dao
 interface TransactionDao {
     @Query("SELECT * from transactions")
-    fun getAll(): List<Transaction>
+    suspend fun getAll(): List<Transaction>
 
     @Insert
-    fun insertAll(vararg transaction: Transaction)
+    suspend fun insertAll(vararg transaction: Transaction)
 
     @Delete
-    fun delete(transaction: Transaction)
+    suspend fun delete(transaction: Transaction)
 
     @Update
-    fun update(vararg transaction: Transaction)
+    suspend fun update(transaction: Transaction)
 }
